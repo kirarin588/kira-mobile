@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1d1830">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="kira">
+<meta name="robots" content="noindex, nofollow">
+<title>kira 2人の勉強</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<style>
+/* kira（Anki のアドオン）が Supabase に送っている2人の今日の記録を、スマホ・iPad で見るページ。見るだけ。 */
+:root {
+  --bg: #1d1830; --card: rgba(255, 255, 255, 0.06); --line: rgba(255, 255, 255, 0.09);
+  --text: #f1eef9; --muted: rgba(241, 238, 249, 0.62); --pink: #ff5fa2; --gold: #ffd54a;
+  --blue: #6fb6ff; --green: #3ddc84; --red: #ff7b7b; --orange: #ffb400;
+}
+:root[data-theme="light"] {
+  --bg: #f6f3fb; --card: #ffffff; --line: rgba(0, 0, 0, 0.08); --text: #231d33; --muted: rgba(35, 29, 51, 0.6);
+  --gold: #c48a00; --blue: #2f7fd6; --green: #18a35a; --red: #d94848; --orange: #c47a00;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f6f3fb; --card: #ffffff; --line: rgba(0, 0, 0, 0.08); --text: #231d33; --muted: rgba(35, 29, 51, 0.6);
+    --gold: #c48a00; --blue: #2f7fd6; --green: #18a35a; --red: #d94848; --orange: #c47a00;
+  }
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); }
+body { font: 15px/1.55 -apple-system, "Hiragino Sans", "Yu Gothic UI", system-ui, sans-serif;
+  padding: calc(env(safe-area-inset-top) + 8px) 16px calc(env(safe-area-inset-bottom) + 80px); max-width: 760px; margin: 0 auto; }
+button { font: inherit; color: inherit; }
+h1 { font-size: 18px; margin: 4px 0 2px; display: flex; align-items: center; gap: 8px; }
+h1 small, .muted { color: var(--muted); font-weight: 500; font-size: 12px; }
+.top { display: flex; align-items: center; gap: 8px; }
+.top .grow { flex: 1; min-width: 0; }
+.iconbtn { border: 1px solid var(--line); background: var(--card); border-radius: 10px; padding: 6px 10px; cursor: pointer; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px; margin: 12px 0; }
+.card h2 { font-size: 15px; margin: 0 0 8px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.who { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.who .name { font-size: 18px; font-weight: 800; }
+.who .score { margin-left: auto; font-size: 26px; font-weight: 900; color: var(--gold); }
+.who .score small { font-size: 12px; color: var(--muted); font-weight: 600; }
+.now { margin: 8px 0 10px; padding: 8px 10px; border-radius: 12px; background: rgba(255, 255, 255, 0.05); font-size: 14px; }
+.now.on { background: rgba(255, 95, 162, 0.16); } .now.brk { background: rgba(61, 220, 132, 0.14); } .now.pause { opacity: 0.8; }
+.now small { color: var(--muted); }
+.dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--pink); margin-right: 6px; animation: blink 1.4s ease-in-out infinite; vertical-align: middle; }
+@keyframes blink { 50% { opacity: 0.3; } }
+@media (prefers-reduced-motion: reduce) { .dot { animation: none; } }
+.goal { margin: 6px 0; }
+.goal .row { display: flex; justify-content: space-between; font-size: 13px; }
+.bar { height: 8px; border-radius: 99px; background: rgba(127, 127, 127, 0.2); overflow: hidden; margin-top: 3px; }
+.bar > span { display: block; height: 100%; border-radius: 99px; background: var(--pink); }
+.bar.ok > span { background: var(--green); } .bar.mid > span { background: var(--orange); } .bar.low > span { background: var(--red); }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 10px 0 4px; }
+.stats div { background: rgba(127, 127, 127, 0.08); border-radius: 10px; padding: 6px 8px; }
+.stats span { display: block; font-size: 11px; color: var(--muted); }
+.stats b { font-size: 17px; }
+details { margin-top: 8px; } summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+.item { display: flex; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.item:first-child { border-top: none; }
+.item .m { width: 18px; flex: none; text-align: center; }
+.item.done { color: var(--muted); }
+.item .when { color: var(--muted); flex: none; min-width: 74px; font-variant-numeric: tabular-nums; }
+.item.strong { font-weight: 700; }
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; display: flex; background: var(--bg); border-top: 1px solid var(--line);
+  padding: 6px 8px calc(env(safe-area-inset-bottom) + 6px); z-index: 10; }
+.tabs button { flex: 1; border: none; background: none; padding: 6px 2px; font-size: 11px; color: var(--muted); cursor: pointer; }
+.tabs button b { display: block; font-size: 20px; line-height: 1.2; }
+.tabs button.on { color: var(--pink); font-weight: 800; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th { text-align: left; font-weight: 600; color: var(--muted); font-size: 11px; padding: 4px 4px; border-bottom: 1px solid var(--line); }
+td { padding: 6px 4px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+td.num, th.num { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pair .lab { font-size: 11px; color: var(--muted); }
+.note { font-size: 13px; color: var(--orange); margin: 2px 0; }
+.win { color: var(--gold); font-weight: 800; }
+.setup input { width: 100%; font: inherit; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--card); color: var(--text); }
+.setup button.main { margin-top: 10px; width: 100%; padding: 11px; border: none; border-radius: 12px; background: var(--pink); color: #fff; font-weight: 800; cursor: pointer; }
+.err { color: var(--red); font-size: 13px; margin-top: 8px; }
+.empty { color: var(--muted); font-size: 13px; padding: 4px 0; }
+.small { font-size: 12px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+(function () {
+  // Anki のアドオン（kira）と同じ Supabase。公開してよい鍵で、ルームコード（x-kira-room）がないと読めない
+  const SUPABASE_URL = "https://bioamywmjxiuzhlxlxcj.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_ZV-_zhWOiyQBoz6RXWXPlA_VGB7L8dV";
+  const STORE = "kira-mobile-room";
+  const STALE_SEC = 6 * 60;
+  const app = document.getElementById("app");
+  const pad = (n) => String(n).padStart(2, "0");
+  const esc = (t) => String(t == null ? "" : t).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const hm = (m) => (m >= 60 ? `${Math.floor(m / 60)}時間${m % 60 ? (m % 60) + "分" : ""}` : `${m}分`);
+  const hhmm = (ms) => { const d = new Date(ms); return `${d.getHours()}:${pad(d.getMinutes())}`; };
+  const md = (iso) => { const d = new Date(iso + "T00:00:00"); return `${d.getMonth() + 1}/${d.getDate()}`; };
+  const W = ["日", "月", "火", "水", "木", "金", "土"];
+  const store = {
+    get() { try { return localStorage.getItem(STORE) || ""; } catch (e) { return ""; } },
+    set(v) { try { localStorage.setItem(STORE, v); } catch (e) { /* 保存できなくても、この画面のあいだは使える */ } },
+    clear() { try { localStorage.removeItem(STORE); } catch (e) { } },
+  };
+  let room = store.get();
+  let rows = [];
+  let tab = "today";
+  let fetchedAt = 0;
+  let error = "";
+
+  // Anki の1日の区切り（午前4時）に合わせた「今日」
+  function ankiToday() {
+    const d = new Date(Date.now() - 4 * 3600 * 1000);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+
+  async function load() {
+    if (!room) return;
+    try {
+      const url = `${SUPABASE_URL}/rest/v1/kira_scores?select=player,name,day,data,updated_at&order=day.desc&limit=80`;
+      const res = await fetch(url, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, "x-kira-room": room } });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      rows = await res.json();
+      error = rows.length ? "" : "このルームコードの記録が見つかりません。コードを確かめてください。";
+      fetchedAt = Date.now();
+    } catch (e) {
+      error = "読み込めませんでした（電波を確かめてください）";
+    }
+    render();
+  }
+
+  // 2人それぞれの最新の行（今日の分）
+  function players() {
+    const by = {};
+    rows.forEach((r) => { if (!by[r.player] || r.day > by[r.player].day) by[r.player] = r; });
+    return Object.values(by).sort((a, b) => String(a.name).localeCompare(String(b.name), "ja"));
+  }
+
+  // いま勉強中か（アドオンの rnow.js と同じ考え方）
+  function pomoPhase(p, t) {
+    const work = p.work * 60, short = p.short * 60, long = p.long * 60, every = Math.max(1, p.every);
+    const cycle = every * work + (every - 1) * short + long;
+    const rounds = Math.floor(t / cycle), done = rounds * every;
+    let rest = t - rounds * cycle;
+    for (let i = 0; i < every; i++) {
+      if (rest < work) return { phase: "work", count: done + i + 1, left: work - rest };
+      rest -= work;
+      const brk = i === every - 1 ? long : short;
+      if (rest < brk) return { phase: "break", count: done + i + 1, left: brk - rest };
+      rest -= brk;
+    }
+    return { phase: "work", count: done + every + 1, left: work };
+  }
+  function nowText(r) {
+    const d = r.data || {}, name = esc(r.name);
+    const nowMs = Date.now(), age = Math.max(0, d.sentAt ? (nowMs - d.sentAt) / 1000 : 1e9);
+    const n = d.now, L = d.last || {}, m = (sec) => Math.max(0, Math.round(sec / 60));
+    const la = L.answer || 0;
+    const anki = la && nowMs - la < 5 * 60 * 1000;
+    const ankiWhat = L.subject ? esc(L.subject + (L.part ? `（${L.part}）` : "")) : "";
+    if (n && age < STALE_SEC) {
+      const what = esc((n.subject || "") + (n.kind ? "・" + n.kind : ""));
+      const act = (n.active || 0) + (n.paused ? 0 : age);
+      if (n.paused) return { cls: "pause", html: `⏸ ${name} ひと休み中 <small>${what}・ここまで${hm(m(act))}</small>` };
+      if (n.mode === "pomodoro" && n.pomo) {
+        const ph = pomoPhase(n.pomo, act);
+        return ph.phase === "work"
+          ? { cls: "on", html: `<i class="dot"></i>🍅 ${name} 勉強中 <small>${what}・${ph.count}回目 残り${m(ph.left)}分</small>` }
+          : { cls: "brk", html: `☕ ${name} 休憩中 <small>あと${m(ph.left)}分</small>` };
+      }
+      if (n.mode === "timer" && n.target) return { cls: "on", html: `<i class="dot"></i>⏳ ${name} 勉強中 <small>${what}・残り${m(n.target - act)}分</small>` };
+      return { cls: "on", html: `<i class="dot"></i>⏱ ${name} 勉強中 <small>${what}・${hm(m(act))}経過</small>` };
+    }
+    if (anki) return { cls: "on", html: `<i class="dot"></i>📘 ${name} Anki で解いている <small>${ankiWhat}</small>` };
+    const ts = Math.max(la, (L.study || 0) * 1000);
+    if (ts && r.day === ankiToday()) {
+      const ago = m((nowMs - ts) / 1000);
+      return { cls: "off", html: `💤 最後の勉強 ${hhmm(ts)} <small>（${ago < 60 ? ago + "分" : Math.floor(ago / 60) + "時間"}前）</small>` };
+    }
+    return { cls: "off", html: `💤 今日はまだ勉強していません` };
+  }
+
+  const lvl = (p) => (p >= 70 ? "ok" : p >= 40 ? "mid" : "low");
+  const sentAgo = (d) => {
+    if (!d || !d.sentAt) return "";
+    const m = Math.round((Date.now() - d.sentAt) / 60000);
+    return m < 1 ? "たった今" : m < 60 ? `${m}分前` : m < 1440 ? `${Math.floor(m / 60)}時間前` : `${Math.floor(m / 1440)}日前`;
+  };
+
+  function todayCard(r) {
+    const d = r.data || {};
+    const isToday = r.day === ankiToday();
+    const nt = nowText(r);
+    const goals = (isToday ? d.goals || [] : []).map((g) => `<div class="goal"><div class="row"><span>${g.done ? "✅ " : ""}${esc(g.name)}</span>
+        <span>${g.value == null ? "—" : g.value}/${esc(g.target)}　<b>${g.pct}%</b></span></div><div class="bar ${g.done ? "ok" : ""}"><span style="width:${Math.min(100, g.pct)}%"></span></div></div>`).join("");
+    const plan = isToday && d.plan && d.plan.items ? d.plan.items : [];
+    const planHtml = plan.length ? plan.map((x) => `<div class="item ${x.done ? "done" : ""}"><span class="m">${x.done ? "✓" : "・"}</span>
+        <span>${esc(x.label)}${!x.done && x.left != null ? ` <span class="muted">残り${x.left}枚</span>` : ""}${x.done && x.doneAt ? ` <span class="muted">${hhmm(x.doneAt * 1000)}</span>` : ""}</span></div>`).join("")
+      : '<div class="empty">今日の勉強計画は入っていません</div>';
+    const tl = isToday && d.timeline && d.timeline.items ? d.timeline.items : [];
+    const tlHtml = tl.length ? tl.map((x) => `<div class="item ${x.strong ? "strong" : ""}"><span class="when">${esc(x.when)}</span><span class="m">${esc(x.icon)}</span><span>${esc(x.text)}</span></div>`).join("")
+      : '<div class="empty">まだありません</div>';
+    const done = plan.filter((x) => x.done).length;
+    return `<div class="card">
+      <div class="who"><span class="name">${esc(r.name)}</span><span class="muted">${sentAgo(d)}に更新</span>
+        <span class="score">${isToday && d.score ? d.score.total : "—"}<small> 点</small></span></div>
+      <div class="now ${nt.cls}">${nt.html}</div>
+      ${isToday ? goals : `<div class="empty">今日の記録はまだ届いていません（最後は ${md(r.day)}）</div>`}
+      ${isToday ? `<div class="stats"><div><span>新規</span><b>${d.newCards ?? "—"}</b></div><div><span>復習</span><b>${d.reviewed ?? "—"}</b></div>
+        <div><span>Anki の時間</span><b>${d.timeline && d.timeline.ankiMin != null ? hm(d.timeline.ankiMin) : hm(d.minutes || 0)}</b></div></div>` : ""}
+      ${isToday ? `<details ${plan.length ? "open" : ""}><summary>📋 今日の勉強計画 ${plan.length ? `${done}/${plan.length}${d.plan.leftMin ? `・残り約${hm(d.plan.leftMin)}` : ""}` : ""}</summary>${planHtml}</details>
+      <details><summary>🕒 今日の流れ</summary>${tlHtml}</details>` : ""}
+    </div>`;
+  }
+
+  function mapTab(ps) {
+    const has = ps.filter((r) => r.data && r.data.map);
+    if (!has.length) return '<div class="card"><div class="empty">進捗率はまだ届いていません（アドオンが新しい版になると出ます）</div></div>';
+    const names = [...new Set(has.flatMap((r) => r.data.map.areas.map((a) => a.name)))];
+    const head = has.map((r) => `<div class="card"><div class="who"><span class="name">${esc(r.name)}</span><span class="score">${r.data.map.pct}<small>%</small></span></div>
+        <div class="bar"><span style="width:${r.data.map.pct}%"></span></div><div class="muted small">${r.data.map.done}/${r.data.map.total}枚（新規として解いたカード）</div></div>`).join("");
+    const rowsHtml = names.map((n) => `<tr><td>${esc(n)}</td>${has.map((r) => {
+      const a = r.data.map.areas.find((x) => x.name === n);
+      return `<td>${a ? `<div class="bar"><span style="width:${a.pct}%"></span></div><span class="muted small">${a.pct}%</span>` : '<span class="muted">—</span>'}</td>`;
+    }).join("")}</tr>`).join("");
+    return head + `<div class="card"><h2>📈 科目ごとの進捗率</h2><table><tr><th>科目</th>${has.map((r) => `<th>${esc(r.name)}</th>`).join("")}</tr>${rowsHtml}</table></div>`;
+  }
+
+  function balanceTab(ps) {
+    const has = ps.filter((r) => r.data && r.data.balance);
+    if (!has.length) return '<div class="card"><div class="empty">復習のバランスはまだ届いていません（アドオンが新しい版になると出ます）</div></div>';
+    return has.map((r) => {
+      const b = r.data.balance;
+      const sign = (v) => (v == null ? "" : ` <span class="muted small">${v > 0 ? "+" : ""}${v}</span>`);
+      return `<div class="card"><h2>🛡 ${esc(r.name)}の復習のバランス</h2>
+        ${b.notes && b.notes.length ? b.notes.map((x) => `<div class="note">⚠ ${esc(x)}</div>`).join("") : '<div class="muted small">大きな偏りはありません</div>'}
+        <table><tr><th>科目</th><th>覚えている割合</th><th class="num">期限</th><th class="num">7日の復習</th></tr>
+        ${b.rows.map((x) => `<tr><td>${x.kind === "focus" ? "🔥" : ""}${esc(x.name)}</td>
+          <td><div class="bar ${lvl(x.pct)}"><span style="width:${x.pct}%"></span></div><span class="small">${x.pct}%${sign(x.pctWeek)}</span></td>
+          <td class="num">${x.due}</td><td class="num">${x.rev7}</td></tr>`).join("")}</table>
+        <div class="muted small" style="margin-top:6px">覚えている割合＝覚えたカードのうち、いまテストされても思い出せそうなカードの割合（FSRS の見込み）。🔥＝新規を進めている科目。</div></div>`;
+    }).join("");
+  }
+
+  function historyTab() {
+    const days = {};
+    rows.forEach((r) => { (days[r.day] = days[r.day] || []).push(r); });
+    const keys = Object.keys(days).sort().reverse().slice(0, 30);
+    if (!keys.length) return '<div class="card"><div class="empty">記録がありません</div></div>';
+    const names = [...new Set(rows.map((r) => r.name))].sort((a, b) => String(a).localeCompare(String(b), "ja"));
+    const body = keys.map((k) => {
+      const rs = days[k];
+      const sc = names.map((n) => { const r = rs.find((x) => x.name === n); return r && r.data && r.data.score ? r.data.score.total : null; });
+      const best = Math.max(...sc.filter((v) => v != null));
+      const d = new Date(k + "T00:00:00");
+      return `<tr><td>${md(k)}（${W[d.getDay()]}）</td>${sc.map((v) => `<td class="num ${v != null && v === best && sc.filter((x) => x != null).length > 1 ? "win" : ""}">${v == null ? "—" : v}${v != null && v === best && sc.filter((x) => x != null).length > 1 ? " 👑" : ""}</td>`).join("")}</tr>`;
+    }).join("");
+    return `<div class="card"><h2>📅 これまでのスコア</h2><table><tr><th>日</th>${names.map((n) => `<th class="num">${esc(n)}</th>`).join("")}</tr>${body}</table></div>`;
+  }
+
+  function setup() {
+    app.innerHTML = `<h1>kira <small>2人の勉強</small></h1>
+      <div class="card setup"><h2>ルームコードを入れてください</h2>
+        <div class="muted small" style="margin-bottom:8px">Anki の kira の「設定 → 対戦」にあるルームコードです。この端末にだけ保存されます（ページには書かれていません）。</div>
+        <input id="room" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="kira-…">
+        <button class="main" id="save">見る</button>
+        ${error ? `<div class="err">${esc(error)}</div>` : ""}</div>
+      <div class="muted small">見るだけのページです。数字は、それぞれの PC の Anki（kira）から届いた分です。スマホで解いた分は、PC の Anki を開いて同期したときに入ります。</div>`;
+    document.getElementById("save").onclick = () => {
+      const v = document.getElementById("room").value.trim();
+      if (!v) return;
+      room = v; store.set(v); error = "";
+      app.innerHTML = '<div class="card"><div class="empty">読み込んでいます…</div></div>';
+      load();
+    };
+  }
+
+  function render() {
+    if (!room || (error && !rows.length)) { setup(); return; }
+    const ps = players();
+    const body = tab === "map" ? mapTab(ps) : tab === "balance" ? balanceTab(ps) : tab === "history" ? historyTab() : ps.map(todayCard).join("");
+    const d = new Date(ankiToday() + "T00:00:00");
+    app.innerHTML = `<div class="top"><div class="grow"><h1>kira <small>${md(ankiToday())}（${W[d.getDay()]}）</small></h1>
+        <div class="muted small">${fetchedAt ? `${hhmm(fetchedAt)} に読み込み・30秒ごとに更新` : ""}${error ? ` ・ <span class="err">${esc(error)}</span>` : ""}</div></div>
+        <button class="iconbtn" id="reload" aria-label="読み込み直す">🔄</button>
+        <button class="iconbtn" id="logout" aria-label="ルームコードを変える">⚙</button></div>
+      ${body}
+      <nav class="tabs">${[["today", "📘", "今日"], ["map", "📈", "進捗率"], ["balance", "🛡", "バランス"], ["history", "📅", "これまで"]]
+        .map(([k, i, l]) => `<button class="${tab === k ? "on" : ""}" data-tab="${k}"><b>${i}</b>${l}</button>`).join("")}</nav>`;
+    document.getElementById("reload").onclick = load;
+    document.getElementById("logout").onclick = () => { if (confirm("この端末に保存したルームコードを消しますか？")) { store.clear(); room = ""; rows = []; render(); } };
+    app.querySelectorAll("[data-tab]").forEach((b) => (b.onclick = () => { tab = b.dataset.tab; render(); window.scrollTo(0, 0); }));
+  }
+
+  render();
+  if (room) load();
+  setInterval(() => { if (room && document.visibilityState === "visible") load(); }, 30000);
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && room) load(); });
+})();
+</script>
+</body>
+</html>

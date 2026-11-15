@@ -1,0 +1,12 @@
+{
+  "name": "kira 2人の勉強",
+  "short_name": "kira",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#1d1830",
+  "theme_color": "#1d1830",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
