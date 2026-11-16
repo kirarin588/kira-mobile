@@ -253,6 +253,17 @@ body { user-select: none; -webkit-user-select: none; }
 .dots i.cur { animation: blinkbox 1.2s ease-in-out infinite; opacity: 1; }
 .vs.timing > .week, .vs.timing > .big { display: none; }
 .vs.timing { gap: 9px; }
+/* 集中モード（タイマー・ストップウォッチ・ポモドーロを動かしている間）：お知らせは出さず、タイマーを大きく。スコアと計画は残す */
+.main.focus { grid-template-columns: 0.78fr 1.5fr 0.78fr; }
+.main.focus .panel [id$="-rings"], .main.focus .panel .stats { display: none; }
+.main.focus .vs { justify-content: center; gap: 14px; container-type: size; }
+.main.focus .vs > .tug, .main.focus .vs > .lead, .main.focus .vs > .first, .main.focus .vs > .maps { display: none; }
+.main.focus .tm { width: min(100%, 50vh, 580px); width: min(100%, calc(100cqh - 100px), 580px); }  /* 真ん中の高さに合わせて、入るいちばん大きいサイズ */
+.main.focus .hero { gap: 10px; }
+.main.focus .hero .hk { font-size: 13px; }
+.main.focus .hero .nx { font-size: 16px; }
+.main.focus .dots i { width: 13px; height: 13px; }
+.main.focus .panel .who .score b { font-size: clamp(34px, 4vw, 52px); }
 /* 測っている間は、画面のまわりがゆっくり光る（勉強＝ピンク、休憩＝緑） */
 #glow { position: fixed; inset: 0; z-index: 3; pointer-events: none; border-radius: 0; opacity: 0; transition: opacity 1.5s;
   box-shadow: inset 0 0 0 2px var(--gc, transparent), inset 0 0 90px var(--gc, transparent); }
@@ -287,6 +298,15 @@ body { user-select: none; -webkit-user-select: none; }
 .spot .m { font-size: clamp(22px, 2.8vw, 34px); font-weight: 800; margin-top: 8px; line-height: 1.35; min-height: 1.35em; }
 .spot .m .cur { display: inline-block; width: 0.5em; height: 1em; background: var(--cy); vertical-align: -0.12em; margin-left: 3px; animation: blink 0.8s steps(1) infinite; }
 .spot .s { margin-top: 6px; font-size: 14px; color: var(--muted); }
+.spot .pl { margin-top: 12px; display: flex; flex-direction: column; gap: 5px; }
+.spot .pl div { display: flex; gap: 10px; align-items: center; font-size: 15px; padding: 6px 10px; border-radius: 9px; background: rgba(255, 255, 255, 0.04);
+  animation: slidein 0.5s both; animation-delay: calc(0.5s + var(--i) * 0.12s); }
+.spot .pl div.done { color: var(--muted); }
+.spot .pl div.done .t { text-decoration: line-through; text-decoration-color: rgba(255, 255, 255, 0.3); }
+.spot .pl div.next { background: rgba(95, 243, 255, 0.1); box-shadow: inset 3px 0 0 var(--cy); }
+.spot .pl .c { width: 1.2em; text-align: center; color: var(--rev); }
+.spot .pl .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spot .pl .r { font-family: var(--mono); font-size: 13px; color: var(--muted); }
 .spot .n { font-family: var(--mono); font-size: clamp(56px, 7vw, 92px); font-weight: 800; line-height: 1; margin-top: 10px; color: #fff; text-shadow: 0 0 30px rgba(95, 243, 255, 0.6); }
 .spot .n small { font-size: 0.4em; color: var(--cy); margin-left: 4px; }
 .spot .pb { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.1); margin-top: 12px; overflow: hidden; }
@@ -314,8 +334,10 @@ body { user-select: none; -webkit-user-select: none; }
   #app { height: auto; min-height: 100%; }
   .top { position: sticky; top: 0; z-index: 10; margin: -14px -20px 0; padding: 12px 20px; background: rgba(4, 3, 15, 0.82); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); flex-wrap: wrap; }
   .clock .hm { font-size: 64px; }
-  .main { grid-template-columns: 1fr; }
+  .main, .main.focus { grid-template-columns: 1fr; }
   .vs { order: -1; }
+  .main.focus .vs { container-type: normal; }
+  .main.focus .tm { width: min(100%, 52vh, 560px); }
 }
 .ready .panel, .ready .vs, .ready .it, .ready .wb i { animation-name: none; }
 .ready .panel .sweep { animation-name: sweep; }
@@ -748,6 +770,7 @@ body { user-select: none; -webkit-user-select: none; }
   let spotBusy = false;
   const spotQueue = [];
   function spotlight(kind, msg, sub, big, extra) {
+    if (heroOn) return;  // 集中モード中は出さない
     spotQueue.push({ kind, msg, sub, big, ...(extra || {}) });
     if (!spotBusy) nextSpot();
   }
@@ -761,8 +784,8 @@ body { user-select: none; -webkit-user-select: none; }
     el.innerHTML = `<div class="k"><span>${x.kind}</span><i>${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}</i></div><div class="m"><span class="tx"></span><span class="cur"></span></div>`
       + (x.num != null ? `<div class="n"><span class="nv">0</span><small>${esc(x.unit || "")}</small></div>` : "")
       + (x.pct != null ? `<div class="pb"><span></span></div>` : "")
-      + (x.sub ? `<div class="s">${x.sub}</div>` : "");
-    if (heroOn) el.style.top = "80%";  // 測っている間は、タイマーにかぶらないよう下に出す
+      + (x.sub ? `<div class="s">${x.sub}</div>` : "")
+      + (x.list ? `<div class="pl">${x.list}</div>` : "");
     document.body.appendChild(el);
     if (x.num != null) {  // 数字は 0 から数え上げる
       const nv = el.querySelector(".nv"), dec = String(x.num).includes(".") ? 1 : 0, t0 = performance.now();
@@ -776,7 +799,7 @@ body { user-select: none; -webkit-user-select: none; }
     let i = 0;
     const typer = setInterval(() => { tx.textContent = chars.slice(0, ++i).join(""); if (i >= chars.length) clearInterval(typer); }, 34);
     if (x.big) burst(220);
-    setTimeout(() => { el.remove(); setTimeout(nextSpot, 600); }, 6000);
+    setTimeout(() => { el.remove(); setTimeout(nextSpot, 600); }, x.dur || 6000);
   }
   // 自分のいまの数字を、順番に真ん中に大きく出す（いま勉強している科目の進捗率・今日の枚数・計画の残り など）
   let spotIdx = 0;
@@ -792,8 +815,24 @@ body { user-select: none; -webkit-user-select: none; }
     out.push({ kind: "// TODAY", msg: "🃏 今日 解いたカード", num: (d.newCards || 0) + (d.reviewed || 0), unit: "枚", sub: `新規 ${d.newCards || 0}枚 ・ 復習 ${d.reviewed || 0}枚 ・ Anki ${hm(min)}` });
     (d.goals || []).forEach((g) => out.push({ kind: "// DAILY GOAL", msg: `🎯 ${g.name}`, num: g.value || 0, unit: `/ ${g.target}${g.unit || ""}`, pct: g.pct, sub: g.done ? "✅ 達成！" : `あと ${Math.max(0, g.target - (g.value || 0))}${g.unit || ""}` }));
     const items = d.plan && d.plan.items || [], next = items.find((x) => !x.done);
-    if (items.length) out.push({ kind: "// TODAY'S PLAN", msg: next ? `📋 次は ${next.label}` : "📋 今日の計画、ぜんぶ終わり！", num: items.filter((x) => x.done).length, unit: `/ ${items.length}件`,
-      pct: (items.filter((x) => x.done).length * 100) / items.length, sub: d.plan.leftMin ? `のこり約${hm(d.plan.leftMin)} ・ ${esc(d.plan.finishAt)}ごろ終わる` : "" });
+    if (items.length) {  // 今日の勉強計画の全体
+      const nDone = items.filter((x) => x.done).length, MAX = 8;
+      const list = items.slice(0, MAX).map((x, i) => `<div class="${x.done ? "done" : ""} ${x === next ? "next" : ""}" style="--i:${i}"><span class="c">${x.done ? "✓" : x === next ? "▶" : "・"}</span>
+          <span class="t">${esc(x.label)}</span><span class="r">${x.done ? (x.doneAt ? hhmm(x.doneAt * 1000) : "済") : x.left != null ? `${x.left}枚` : ""}</span></div>`).join("")
+        + (items.length > MAX ? `<div style="--i:${MAX}"><span class="c"></span><span class="t">ほか ${items.length - MAX}件</span></div>` : "");
+      out.push({ kind: "// TODAY'S PLAN", msg: nDone === items.length ? "📋 今日の勉強計画、ぜんぶ終わり！" : `📋 今日の勉強計画（${items.length}件）`, num: nDone, unit: `/ ${items.length}件 完了`,
+        pct: (nDone * 100) / items.length, list, dur: 6000 + Math.min(items.length, MAX) * 700,
+        sub: d.plan.leftMin ? `のこり約${hm(d.plan.leftMin)} ・ ${esc(d.plan.finishAt)}ごろ終わる` : "" });
+    }
+    if (d.exam) {  // 試験まで（上の時計と同じく、いまの時刻から数える）
+      const e = d.exam, md = (iso) => { const t = new Date(iso + "T00:00:00"); return `${t.getMonth() + 1}/${t.getDate()}（${W[t.getDay()]}）`; };
+      const days = (iso, plus) => { const t = new Date(iso + "T00:00:00"); t.setDate(t.getDate() + plus); return Math.max(0, Math.floor((t - Date.now()) / 86400000)); };
+      if (e.inPeriod) out.push({ kind: "// EXAM PERIOD", msg: `📝 ${e.name} 期間中`, num: days(e.end, 1), unit: "日 のこり", sub: `${md(e.start)} 〜 ${md(e.end)}` });
+      else {
+        const n = days(e.start, 0);
+        out.push({ kind: "// EXAM COUNTDOWN", msg: `⏳ ${e.name} まで`, num: n, unit: "日", sub: `${md(e.start)} から ・ ${n <= 14 ? "ラストスパート！" : `あと ${Math.floor(n / 7)}週と${n % 7}日`}` });
+      }
+    }
     if (d.exam && d.map && !d.exam.inPeriod && d.exam.daysTo > 0) {
       const left = d.map.total - d.map.done;
       if (left > 0) out.push({ kind: "// EXAM PACE", msg: `⏳ ${d.exam.name}までに新規を終えるには`, num: Math.ceil(left / d.exam.daysTo), unit: "枚/日", sub: `のこり ${left.toLocaleString()}枚 ÷ ${d.exam.daysTo}日` });
@@ -804,11 +843,11 @@ body { user-select: none; -webkit-user-select: none; }
     return out;
   }
   function insightSpot() {
-    if (spotBusy || !built) return;
+    if (spotBusy || !built || heroOn) return;
     const xs = insights(players()[0]);
     if (!xs.length) return;
     const x = xs[(spotIdx++) % xs.length];
-    spotlight(x.kind, x.msg, x.sub, false, { num: x.num, unit: x.unit, pct: x.pct });
+    spotlight(x.kind, x.msg, x.sub, false, { num: x.num, unit: x.unit, pct: x.pct, list: x.list, dur: x.dur });
   }
 
   // 時計
@@ -881,7 +920,7 @@ body { user-select: none; -webkit-user-select: none; }
         const g = s.goals.find((x) => !o.goals.includes(x));
         if (g) { spotlight("// GOAL", `🎯 ${s.name}「${g}」達成！`, "", true); return; }
         const it = s.done.find((x) => !o.done.includes(x));
-        if (it) { spotlight("// TASK DONE", `✅ ${s.name} が終えた`, esc(it), false); burst(70); return; }
+        if (it) { spotlight("// TASK DONE", `✅ ${s.name} が終えた`, esc(it), false); if (!heroOn) burst(70); return; }
         if (s.on && !o.on && id !== (ps[0] && ps[0].player)) spotlight("// STATUS", `📘 ${s.name} が勉強を始めた`, "", false);
       });
     }
@@ -1010,7 +1049,10 @@ body { user-select: none; -webkit-user-select: none; }
     const exHtml = examHtml(ps), exEl = document.getElementById("exam");
     if (exEl.dataset.k !== exHtml) { exEl.innerHTML = exHtml; exEl.dataset.k = exHtml; }
     tickExam();
-    document.getElementById("main").innerHTML = (me ? panel(me, "me") : "") + vs.html + (rv ? panel(rv, "rv") : '<section class="panel rv"><div class="empty">相手のデータを待っています…</div></section>');
+    const mainEl = document.getElementById("main");
+    mainEl.classList.toggle("focus", heroOn);
+    if (heroOn) { spotQueue.length = 0; document.querySelectorAll(".spot").forEach((x) => x.remove()); }  // 集中モードに入ったら、出ているお知らせを消す
+    mainEl.innerHTML = (me ? panel(me, "me") : "") + vs.html + (rv ? panel(rv, "rv") : '<section class="panel rv"><div class="empty">相手のデータを待っています…</div></section>');
     const tk = ticker(ps), tEl = document.getElementById("tick");
     if (tEl.dataset.k !== tk) { tEl.innerHTML = tk; tEl.dataset.k = tk; }
     document.getElementById("upd").textContent = fetchedAt ? `LIVE ・ ${hhmm(fetchedAt)} 更新 ・ 30秒ごと${error ? " ・ " + error : ""}` : "";
