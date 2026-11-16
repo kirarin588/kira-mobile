@@ -343,6 +343,99 @@ body { user-select: none; -webkit-user-select: none; }
 .ready .panel .sweep { animation-name: sweep; }
 .ready .it.next .ck { animation-name: blinkbox; }
 .ready .panel.flash { animation-name: pflash; }
+
+/* ───────── スマホ：1画面に1枚。左右にスワイプ（または下のタブ）で切りかえる。時計はいつも上に ───────── */
+.tabs, #mini { display: none; }
+@media (max-width: 600px), (max-height: 500px) and (orientation: landscape) {
+  html, body { overflow: hidden; }
+  #app { height: 100%; min-height: 0; gap: 8px; padding: max(8px, env(safe-area-inset-top)) 0 max(6px, env(safe-area-inset-bottom)); }
+  .top { position: relative; margin: 0; padding: 0 14px; background: none; backdrop-filter: none; -webkit-backdrop-filter: none;
+    display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "clock date date" "exam exam seg"; gap: 6px 10px; align-items: center; }
+  .clockbox { grid-area: clock; gap: 8px; }
+  .secring { width: 42px; }
+  .secring .s { font-size: 14px; }
+  .clock .hm { font-size: 50px; white-space: nowrap; }
+  .date { grid-area: date; min-width: 0; white-space: nowrap; overflow: hidden; padding-right: 40px; }
+  .date .d { font-size: 14px; }
+  .date .w { font-size: 9px; margin-top: 3px; letter-spacing: 0.1em; }
+  .grow { display: none; }
+  .tools { display: contents; }
+  #gear { position: absolute; right: 14px; top: 0; }
+  #exam { grid-area: exam; min-width: 0; }
+  #ringseg, #mini { grid-area: seg; justify-self: end; }
+  .seg button { font-size: 11px; padding: 5px 8px; white-space: nowrap; }
+  #mini { white-space: nowrap; }
+  .exam { padding: 4px 12px 5px; border-radius: 12px; text-align: left; }
+  .exam .l { font-size: 10px; letter-spacing: 0.04em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .exam .cd { margin: 1px 0 0; gap: 6px; justify-content: flex-start; }
+  .exam .dd { font-size: 22px; }
+  .exam .hms { font-size: 13px; }
+  .exam .bar { display: none; }
+  /* タイマー中：右上の「輪の切りかえ」の代わりに、小さなタイマー（押すとタイマーの画面へ） */
+  #app.timing #ringseg { display: none; }
+  #app.timing #mini { display: inline-flex; }
+  #mini { align-items: center; gap: 6px; font: inherit; font-family: var(--mono); font-size: 15px; font-weight: 700; color: #fff; padding: 5px 12px; border-radius: 999px;
+    background: color-mix(in srgb, var(--tc, var(--cy)) 22%, transparent); border: 1px solid var(--tc, var(--cy)); box-shadow: 0 0 14px color-mix(in srgb, var(--tc, var(--cy)) 55%, transparent); }
+  #mini i { width: 7px; height: 7px; border-radius: 50%; background: var(--tc, var(--cy)); animation: blink 1s steps(1) infinite; }
+  #app.ontimer #mini { opacity: 0.35; box-shadow: none; }
+
+  /* ページ（自分・VS/タイマー・相手）を横に並べて、1枚ずつ止まる */
+  .main, .main.focus { display: flex; gap: 22px; padding: 0 14px; scroll-padding: 0 14px; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory;
+    scrollbar-width: none; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; perspective: 1100px; perspective-origin: 50% 40%; }
+  .main::-webkit-scrollbar { display: none; }
+  .main > section { flex: 0 0 100%; min-width: 0; height: 100%; scroll-snap-align: center; scroll-snap-stop: always; transform-origin: 50% 50%; will-change: transform, opacity; }
+  .vs { order: 0; overflow-y: auto; }
+  .panel { overflow-y: auto; overscroll-behavior-y: contain; }
+  .plan { flex: none; }
+  .plan .list { overflow: visible; mask-image: none; -webkit-mask-image: none; }
+  .main.focus .panel [id$="-rings"], .main.focus .panel .stats { display: block; }
+  .main.focus .panel .stats { display: grid; }
+  .main.focus .vs { container-type: size; overflow: hidden; }
+  .main.focus .tm { width: min(100%, 50vh, 560px); width: min(100%, calc(100cqh - 110px), 560px); }
+  section.pg-in { animation: pgin 0.7s ease-out !important; }
+  @keyframes pgin { 0% { box-shadow: 0 0 0 1px var(--p1, var(--cy)), 0 0 46px color-mix(in srgb, var(--p1, var(--cy)) 55%, transparent); } }
+  section.pg-in .sweep { animation: sweep 0.9s ease-out 1 !important; }
+  .spot { width: calc(100vw - 28px); padding: 18px 18px 20px; }
+  .spot .m { font-size: 21px; }
+  .spot .pl div { font-size: 13.5px; }
+
+  /* 下：タブ（いまのページに光るバーがついていく） */
+  #tick, .foot { display: none; }
+  .tabs { display: grid; grid-template-columns: repeat(var(--n, 3), 1fr); position: relative; margin: 0 14px; border-radius: 16px; background: rgba(10, 14, 38, 0.6);
+    border: 1px solid var(--line); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); overflow: hidden; }
+  .tabs button { position: relative; z-index: 1; font: inherit; color: var(--muted); background: none; border: none; padding: 8px 4px 9px; display: flex; flex-direction: column; align-items: center; gap: 1px; transition: color 0.3s; }
+  .tabs button b { font-size: 13px; font-weight: 800; white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .tabs button small { font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; }
+  .tabs button.on { color: #fff; }
+  .tabs button.on small { color: var(--tabc, var(--cy)); text-shadow: 0 0 8px var(--tabc, var(--cy)); }
+  .tabs .ind { position: absolute; left: 0; top: 0; bottom: 0; width: calc(100% / var(--n, 3)); pointer-events: none;
+    background: linear-gradient(180deg, color-mix(in srgb, var(--tabc, var(--cy)) 22%, transparent), transparent 85%); border-top: 2px solid var(--tabc, var(--cy));
+    box-shadow: 0 -2px 18px color-mix(in srgb, var(--tabc, var(--cy)) 60%, transparent); transition: background 0.3s, border-color 0.3s; }
+}
+
+@media (max-width: 400px) {
+  .seg button span { display: none; }  /* せまいスマホ：輪の切りかえは絵文字だけ */
+  .seg button { padding: 5px 9px; }
+  #mini { font-size: 13px; padding: 5px 10px; }
+}
+/* スマホを横にしたとき：上の段は1行、タイマーは左に大きく・情報は右に */
+@media (max-height: 500px) and (orientation: landscape) {
+  #app { gap: 6px; padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
+  .top { grid-template-columns: auto 1fr auto; grid-template-areas: "clock exam seg"; padding-right: 58px; }
+  #gear { top: 4px; }
+  .date { display: none; }
+  .secring { width: 34px; }
+  .secring .s { font-size: 12px; }
+  .clock .hm { font-size: 40px; }
+  #exam { justify-self: center; }
+  .tabs button { padding: 5px 4px 6px; flex-direction: row; justify-content: center; gap: 8px; }
+  .main.focus .hero { height: 100%; display: grid; grid-template-columns: auto minmax(0, auto); grid-template-rows: 1fr auto auto auto 1fr; column-gap: 26px; row-gap: 10px;
+    justify-content: center; align-items: center; }
+  .main.focus .tm { grid-column: 1; grid-row: 1 / 6; width: min(55cqw, calc(100cqh - 24px)); }
+  .main.focus .hero .hk { grid-column: 2; grid-row: 2; }
+  .main.focus .hero .dots { grid-column: 2; grid-row: 3; }
+  .main.focus .hero .nx { grid-column: 2; grid-row: 4; text-align: left; }
+}
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01s !important; animation-iteration-count: 1 !important; transition-duration: 0.2s !important; }
 }
@@ -490,7 +583,7 @@ body { user-select: none; -webkit-user-select: none; }
         <div class="ct"><div class="ph" id="tmPh"></div><div class="big" id="tmB"></div><div class="sub" id="tmS"></div></div></div>
       <div class="dots" id="tmD"></div><div class="nx" id="tmN"></div></div>`;
   }
-  let lastTimerKey = null, heroOn = false;
+  let lastTimerKey = null, heroOn = false, lastScore = {};
   function tickTimer() {
     const me = players()[0];
     const st = timerState(me);
@@ -522,6 +615,9 @@ body { user-select: none; -webkit-user-select: none; }
         : `あと <b>${clk(st.left).replace(/<[^>]+>/g, "")}</b> で 集中 ${st.count + 1}回目（${Math.round(st.nextLen / 60)}分）`)
         : st.phase === "timer" ? `${Math.round(st.len / 60)}分のタイマー` : st.phase === "over" ? `${Math.round(st.len / 60)}分を過ぎました` : "測っています";
       document.getElementById("tmN").innerHTML = nx;
+      const mini = document.getElementById("mini");
+      if (mini) { mini.style.setProperty("--tc", col);
+        mini.innerHTML = `<i></i>${st.phase === "work" ? "🍅" : st.phase === "break" ? "☕" : st.phase === "sw" ? "⏱" : "⏳"} ${(st.phase === "over" ? "+" : "") + clk(big).replace(/<[^>]+>/g, "")}`; }
     }
     glow.style.setProperty("--gc", col);
     glow.classList.add("on");
@@ -882,11 +978,13 @@ body { user-select: none; -webkit-user-select: none; }
         <div class="clock"><span class="hm num" id="hm"></span></div></div>
       <div class="date" id="date"></div><div class="grow"></div><div id="exam"></div>
       <div class="tools"><button class="iconbtn" id="gear" aria-label="設定">⚙</button>
-        <div class="seg" id="ringseg">${[["goals", "🎯 目標"], ["plan", "📋 計画"], ["swap", "🔄 交互"]].map(([k, l]) => `<button data-ring="${k}" class="${ringMode === k ? "on" : ""}">${l}</button>`).join("")}</div></div>
+        <button id="mini" aria-label="タイマーの画面へ"></button>
+        <div class="seg" id="ringseg">${[["goals", "🎯", "目標"], ["plan", "📋", "計画"], ["swap", "🔄", "交互"]].map(([k, e, l]) => `<button data-ring="${k}" class="${ringMode === k ? "on" : ""}" aria-label="${l}">${e}<span> ${l}</span></button>`).join("")}</div></div>
     </header>`;
   }
   function bindHeader() {
     document.getElementById("gear").onclick = (e) => { e.stopPropagation(); settings(); };
+    document.getElementById("mini").onclick = (e) => { e.stopPropagation(); goPage(1); };
     document.querySelectorAll("[data-ring]").forEach((b) => (b.onclick = (e) => {
       e.stopPropagation();
       ringMode = b.dataset.ring; store.set(RING_KEY, ringMode);
@@ -1036,9 +1134,12 @@ body { user-select: none; -webkit-user-select: none; }
     const ps = players();
     const me = ps[0], rv = ps[1];
     const vs = vsPanel(me, rv);
+    lastScore = { a: me ? vs.a : null, b: rv ? vs.b : null };
     if (!built) {
       app.innerHTML = headerHtml() + `<main class="main" id="main"></main>
-        <div><div id="tick"></div><div class="foot"><span id="upd" class="live"></span><span>KIRA DESK ・ v2</span></div></div>`;
+        <div><div id="tick"></div><div class="foot"><span id="upd" class="live"></span><span>KIRA DESK ・ v2</span></div>
+        <nav class="tabs" id="tabs"><i class="ind" id="tabInd"></i></nav></div>`;
+      bindPager();
       bindHeader();
       lastHM = ""; tickClock();
       built = true;
@@ -1052,10 +1153,12 @@ body { user-select: none; -webkit-user-select: none; }
     const mainEl = document.getElementById("main");
     mainEl.classList.toggle("focus", heroOn);
     if (heroOn) { spotQueue.length = 0; document.querySelectorAll(".spot").forEach((x) => x.remove()); }  // 集中モードに入ったら、出ているお知らせを消す
+    const keepX = mainEl.scrollLeft;
     mainEl.innerHTML = (me ? panel(me, "me") : "") + vs.html + (rv ? panel(rv, "rv") : '<section class="panel rv"><div class="empty">相手のデータを待っています…</div></section>');
     const tk = ticker(ps), tEl = document.getElementById("tick");
     if (tEl.dataset.k !== tk) { tEl.innerHTML = tk; tEl.dataset.k = tk; }
     document.getElementById("upd").textContent = fetchedAt ? `LIVE ・ ${hhmm(fetchedAt)} 更新 ・ 30秒ごと${error ? " ・ " + error : ""}` : "";
+    afterPager(keepX, ps);
     animateBars();
     // 今の描画の要素だけに入れる（前の描画の分があとから動いて、0点から上がったように見えないように）
     const scEls = [[document.getElementById("me-sc"), vs.a], [document.getElementById("rv-sc"), vs.b]];
@@ -1066,6 +1169,92 @@ body { user-select: none; -webkit-user-select: none; }
     // はじめて開いたとき：どちらが自分かを選んでもらう（タイマーは自分の分を大きく出すため）
     if (ps.length > 1 && !store.get(ME_KEY) && !document.querySelector(".sheet") && !askedMe) { askedMe = true; settings(); }
   }
+
+
+  // ───────── スマホ：ページの切りかえ ─────────
+  const PHONE_Q = window.matchMedia("(max-width: 600px), (max-height: 500px) and (orientation: landscape)");
+  const PAGE_KEY = "kira-desk-page";
+  const isPhone = () => PHONE_Q.matches;
+  let page = Number(store.get(PAGE_KEY) || 0) || 0, wasHero = null, pagerRaf = 0, goingTo = null;
+  const pages = () => [...document.querySelectorAll("#main > section")];
+  function stride() { const p = pages(); return p.length > 1 ? p[1].offsetLeft - p[0].offsetLeft : 1; }
+  function goPage(i, instant) {
+    const m = document.getElementById("main"), p = pages();
+    if (!m || !p.length) return;
+    i = Math.max(0, Math.min(p.length - 1, i));
+    const x = i * stride();
+    // 動いている途中で描き直しても、そのまま行き先へ（もう着いているなら覚えない。念のため2秒で忘れる）
+    goingTo = instant || Math.abs(m.scrollLeft - x) < 2 ? null : i;
+    clearTimeout(goPage.t); goPage.t = setTimeout(() => { goingTo = null; }, 2000);
+    m.scrollTo({ left: x, behavior: instant ? "auto" : "smooth" });
+    if (instant) onPagerScroll();
+  }
+  function onPagerScroll() {
+    pagerRaf = 0;
+    const m = document.getElementById("main");
+    if (!m || !isPhone()) return;
+    const p = pages(), pos = m.scrollLeft / stride();
+    // 3D で奥に回りこむように：真ん中から離れるほど回して、小さく、うすく
+    p.forEach((el, i) => {
+      const o = Math.max(-1.2, Math.min(1.2, i - pos)), a = Math.abs(o);
+      el.style.transform = `translateZ(${(-a * 120).toFixed(1)}px) rotateY(${(-o * 38).toFixed(2)}deg) scale(${(1 - a * 0.06).toFixed(3)})`;
+      el.style.opacity = (1 - Math.min(1, a) * 0.55).toFixed(3);
+      el.style.filter = a > 0.02 ? `brightness(${(1 - a * 0.35).toFixed(3)}) saturate(${(1 + a * 0.6).toFixed(2)})` : "";
+    });
+    const tabs = document.getElementById("tabs"), ind = document.getElementById("tabInd");
+    if (ind) ind.style.transform = `translateX(${(pos * 100).toFixed(2)}%)`;
+    const cur = Math.round(pos);
+    if (cur !== page) {
+      page = cur; store.set(PAGE_KEY, String(page));
+      const el = p[cur];
+      if (el && Math.abs(pos - cur) < 0.02) { el.classList.remove("pg-in"); void el.offsetWidth; el.classList.add("pg-in"); setTimeout(() => el.classList.remove("pg-in"), 900); }
+    }
+    if (tabs) {
+      tabs.querySelectorAll("button").forEach((b, i) => b.classList.toggle("on", i === Math.round(pos)));
+      const on = tabs.querySelectorAll("button")[Math.round(pos)];
+      tabs.style.setProperty("--tabc", on ? on.dataset.c : "var(--cy)");
+    }
+    app.classList.toggle("ontimer", heroOn && Math.round(pos) === 1);
+  }
+  function bindPager() {
+    const m = document.getElementById("main");
+    m.addEventListener("scroll", () => { if (!pagerRaf) pagerRaf = requestAnimationFrame(onPagerScroll); }, { passive: true });
+    // 止まったところで光らせる（スクロールが止まったら）
+    let endT = 0;
+    m.addEventListener("scroll", () => { clearTimeout(endT); endT = setTimeout(() => {
+      goingTo = null;
+      if (!isPhone()) return;
+      const el = pages()[page]; if (el) { el.classList.remove("pg-in"); void el.offsetWidth; el.classList.add("pg-in"); setTimeout(() => el.classList.remove("pg-in"), 900); }
+    }, 140); }, { passive: true });
+    document.getElementById("tabs").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) { e.stopPropagation(); goPage(Number(b.dataset.pg)); } });
+  }
+  function afterPager(keepX, ps) {
+    app.classList.toggle("timing", heroOn);
+    const tabs = document.getElementById("tabs");
+    if (!isPhone()) {
+      pages().forEach((el) => { el.style.transform = el.style.opacity = el.style.filter = ""; });
+      wasHero = heroOn;
+      return;
+    }
+    const me = ps[0], rv = ps[1], md = document.getElementById("me-sc"), rd = document.getElementById("rv-sc");
+    const sc = (side) => { const v = side === "me" ? lastScore.a : lastScore.b; return v != null ? `${v}点` : "—"; };
+    const list = [];
+    if (me) list.push({ c: "var(--me)", b: esc(me.name), s: sc("me") });
+    list.push(heroOn ? { c: "var(--tc, var(--cy))", b: "⏱ タイマー", s: "FOCUS" } : { c: "var(--gold)", b: "⚔ VS", s: rv ? `${lastScore.a ?? 0}−${lastScore.b ?? 0}` : "" });
+    list.push({ c: "var(--rv)", b: rv ? esc(rv.name) : "相手", s: rv ? sc("rv") : "—" });
+    tabs.style.setProperty("--n", list.length);
+    tabs.querySelectorAll("button").forEach((b) => b.remove());
+    tabs.insertAdjacentHTML("beforeend", list.map((x, i) => `<button data-pg="${i}" data-c="${x.c}"><b>${x.b}</b><small>${x.s}</small></button>`).join(""));
+    const m = document.getElementById("main");
+    if (goingTo != null) goPage(goingTo);
+    else if (Math.abs(m.scrollLeft - keepX) > 1) m.scrollLeft = keepX;
+    // タイマーを始めたら、タイマーの画面へ（はじめて開いたときも）
+    if (heroOn && wasHero !== true) { page = 1; goPage(1, wasHero === null); }
+    else if (wasHero === null) goPage(page, true);
+    wasHero = heroOn;
+    onPagerScroll();
+  }
+  PHONE_Q.addEventListener ? PHONE_Q.addEventListener("change", () => { built && render(); }) : PHONE_Q.addListener(() => { built && render(); });
 
   // 焼き付き防止：1分ごとに少しだけ位置をずらす
   setInterval(() => { app.style.transform = `translate(${Math.round((Math.random() - 0.5) * 8)}px, ${Math.round((Math.random() - 0.5) * 6)}px)`; }, 60000);
